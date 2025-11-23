@@ -124,7 +124,7 @@ class InitializeViniappDirectory implements ShouldQueue
             }
 
             // Run droid exec command with FACTORY_API_KEY environment variable
-            $factoryApiKey = 'fk-26rXnp7OZHfQes30NXFN-vo9w7B5Py3qDG9-JJoKhR-JUln_K4l5ERW9hoBXJzx4';
+            $factoryApiKey = env('FACTORY_API_KEY');
             $slugDirectory = storage_path('deploy/' . $slug);
             
             // Ensure the slug directory exists
