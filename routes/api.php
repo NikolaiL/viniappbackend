@@ -24,3 +24,10 @@ Route::get('test-create-viniapp', function (ViniappController $viniappController
     ]));
     return $viniappController->createNewViniapp($request);
 });
+
+Route::get('/show-viniapp/{transaction_hash}', [ViniappController::class, 'showByTransactionHash']);
+
+
+Route::get('/test-initialize-viniapp-directory', function (ViniappController $viniappController) {
+    return $viniappController->initializeViniappDirectory(3);
+});

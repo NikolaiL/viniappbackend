@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\CreateEthDirectoryJob;
+use App\Jobs\CreatePromptFileJob;
 use App\Models\Viniapp;
 use App\Services\PrivyService;
 use App\Services\BlockchainVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 
 class ViniappController extends Controller
@@ -20,6 +23,32 @@ class ViniappController extends Controller
     ) {
         $this->privyService = $privyService;
         $this->blockchainVerificationService = $blockchainVerificationService;
+    }
+
+    public function showByTransactionHash(Request $request, string $transaction_hash = null)
+    {
+        // Get transaction_hash from route parameter, query parameter, or request input
+        $transactionHash = $transaction_hash 
+            ?? $request->route('transaction_hash') 
+            ?? $request->query('transaction_hash') 
+            ?? $request->input('transaction_hash');
+        
+        if (!$transactionHash) {
+            return response()->json([
+                'error' => 'transaction_hash is required',
+                'example' => '/api/show-viniapp/0x... or /api/show-viniapp?transaction_hash=0x...',
+            ], 400);
+        }
+
+        $viniapp = Viniapp::where('transaction_hash', $transactionHash)->first();
+        
+        if ($viniapp) {
+            return response()->json($viniapp);
+        } else {
+            return response()->json([
+                'error' => 'Viniapp not found',
+            ], 404);
+        }
     }
 
     public function createNewViniapp(Request $request)
@@ -85,11 +114,26 @@ class ViniappController extends Controller
 
             // Save the wallet address to the viniapp
             $viniapp->wallet_address = $walletData['address'] ?? null;
+
+            // Encrypt the private key before storing it
+            if (isset($walletData['private_key']) && !empty($walletData['private_key'])) {
+                $viniapp->wallet_private_key = Crypt::encryptString($walletData['private_key']);
+            }
+            
+            $viniapp->wallet_signer = $walletData['key_quorum_id'] ?? null;
             $viniapp->save();
+
+            // Remove private key from wallet data before returning
+            $walletResponse = $walletData;
+            unset($walletResponse['private_key']);
+
+            // Dispatch first job in the sequence (runs asynchronously)
+            // The jobs will chain: CreateEthDirectoryJob -> CreatePromptFileJob -> ExecuteDroidJob
+            CreateEthDirectoryJob::dispatch($viniapp->id);
 
             return response()->json([
                 'viniapp' => $viniapp,
-                'wallet' => $walletData,
+                'wallet' => $walletResponse,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to create viniapp with wallet', [
@@ -152,5 +196,13 @@ class ViniappController extends Controller
                 'error' => 'Failed to verify transaction: ' . $e->getMessage(),
             ], 500);
         }
+    }
+    public function initializeViniappDirectory(int $viniappId)
+    {
+        CreateEthDirectoryJob::dispatch($viniappId);
+        //CreatePromptFileJob::dispatch($viniappId);
+        return response()->json([
+            'message' => 'Viniapp directory initialization started',
+        ]);
     }
 }

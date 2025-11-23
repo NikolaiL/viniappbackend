@@ -26,6 +26,10 @@ return new class extends Migration
             $table->string('wallet_address')->nullable();
             $table->string('wallet_private_key')->nullable();
             $table->string('wallet_signer')->nullable();
+            $table->string('agent_session_id')->nullable();
+            $table->string('github_url')->nullable();
+            $table->string('website_url')->nullable();
+            $table->string('ens')->nullable();
             $table->timestamps();
         });
     }
