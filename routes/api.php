@@ -29,5 +29,5 @@ Route::get('/show-viniapp/{transaction_hash}', [ViniappController::class, 'showB
 
 
 Route::get('/test-initialize-viniapp-directory', function (ViniappController $viniappController) {
-    return $viniappController->initializeViniappDirectory(3);
+    return $viniappController->initializeViniappDirectory(5);
 });
